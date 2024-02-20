@@ -35,7 +35,7 @@ if(chkur.includes("Test_ship_Ticket_Public.aspx")){
     if(a){a.checked = false;document.getElementById("ContentPlaceHolder1_shipwaiting_RadioButtonList_0").checked = true;document.getElementById('ContentPlaceHolder1_shiptsubmit_Button').click();} 
   document.getElementById('ContentPlaceHolder1_shiptsubmit_Button').click();
   }
-  var timeout2 = setInterval(rfsClk, 15000);  function rfsClk() { window.location.href = chkur; }
+  var timeout2 = setInterval(rfsClk, 150000);  function rfsClk() { window.location.href = chkur; }
 }
 if( chkur.includes("pg_req_test1.aspx")){
 	function setDetails(){
