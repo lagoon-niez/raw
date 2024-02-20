@@ -1,7 +1,7 @@
 var Usermob = '8547880597';
 let chkur=window.location.href;
 if(chkur.includes("Test_LoginPage.aspx")){
-var timeout = setInterval(BtnClick, 10);
+var timeout = setInterval(BtnClick, 100);
 function BtnClick() {
 var Sp = document.getElementById('ContentPlaceHolder1_ddlShip');
 for (var i = 0; i < Sp.options.length; i++) {if (Sp.options[i].text === Ship) {Sp.selectedIndex = i;break;}}
@@ -35,7 +35,7 @@ if(chkur.includes("Test_ship_Ticket_Public.aspx")){
     if(a){a.checked = false;document.getElementById("ContentPlaceHolder1_shipwaiting_RadioButtonList_0").checked = true;document.getElementById('ContentPlaceHolder1_shiptsubmit_Button').click();} 
   document.getElementById('ContentPlaceHolder1_shiptsubmit_Button').click();
   }
-  var timeout2 = setInterval(rfsClk, 1500);  function rfsClk() { window.location.href = chkur; }
+  var timeout2 = setInterval(rfsClk, 150000);  function rfsClk() { window.location.href = chkur; }
 }
 if( chkur.includes("pg_req_test1.aspx")){
 	function setDetails(){
@@ -61,9 +61,9 @@ if(chkur.includes("pg_request.aspx")){
   ab.play();}
   document.getElementById('btPayment').click();
   alertFunc();
-  var timeout = setInterval(rfsClk2, 100); function rfsClk2() {if(document.querySelectorAll('h1')[0].innerHTML.includes("Server Error")){window.location.replace("https://lakport.utl.gov.in/ship_online_Userlogin.aspx");}  }
+  var timeout = setInterval(rfsClk2, 1000); function rfsClk2() {if(document.querySelectorAll('h1')[0].innerHTML.includes("Server Error")){window.location.replace("https://lakport.utl.gov.in/ship_online_Userlogin.aspx");}  }
 
 }
 
-var timeout = setInterval(rfrError, 100);
+var timeout = setInterval(rfrError, 1000);
 function rfrError(){var x = document.getElementsByTagName('p')[0].innerHTML;if(x.includes("Under")||x.includes("Try")||x.includes("maintenance")){window.location.reload();}}
