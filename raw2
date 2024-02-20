@@ -1,7 +1,7 @@
 var Usermob = '9495668189';
 let chkur=window.location.href;
 if(chkur.includes("Test_LoginPage.aspx")){
-var timeout = setInterval(BtnClick, 10);
+var timeout = setInterval(BtnClick, 100);
 function BtnClick() {
 var Sp = document.getElementById('ContentPlaceHolder1_ddlShip');
 for (var i = 0; i < Sp.options.length; i++) {if (Sp.options[i].text === Ship) {Sp.selectedIndex = i;break;}}
