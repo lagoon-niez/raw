@@ -1,0 +1,239 @@
+let stopScript=false,reloadEnabled=true,handlingFailed=false;
+let lastClickedSeat=null,tried=new Set();
+let scanDone=0,lastDom=0,reloadT=null,lastActivity=Date.now();
+let nextReloadTime=0,alertAudio=null,lastSeatInfo="";
+const startTime=Date.now();
+
+const RD=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const NL=t=>t.replace(/\s+/g," ").trim();
+const kick=()=>lastActivity=Date.now();
+const delay=(a,b)=>SPEED_MODE?RD(40,90):RD(a,b);
+
+const UI=document.createElement("div");
+UI.style.cssText="position:fixed;top:50px;right:50px;z-index:9999;background:#000B;color:#0f0;padding:10px 14px;font-size:18px;border-radius:8px;font-family:monospace";
+document.body.appendChild(UI);
+
+function updateUI(){
+ const now=Date.now();
+ const sec=nextReloadTime?Math.max(0,Math.floor((nextReloadTime-now)/1000)):0;
+ UI.innerHTML =
+`⏱ ${Math.floor((now-startTime)/1000)}s<br>
+🔁 Reload in: ${sec}s<br>
+🎯 Tried: ${tried.size}<br>
+${lastSeatInfo}`;
+}
+
+function playSound(){
+ if(alertAudio) return;
+ alertAudio=new Audio("https://github.com/unknownlakuser/publicjs/raw/main/Happy%20Bell.wav");
+ alertAudio.loop=true;
+ const start=()=>alertAudio.play().catch(()=>{});
+ start();
+ document.addEventListener("click",start,{once:true});
+}
+function onPay(){
+ const el=document.querySelector('img[src*="whatsapp"]');
+ if(el){stopScript=true;playSound();return true;}
+ return false;
+}
+
+new MutationObserver(m=>{
+ for(const x of m){
+  for(const n of x.addedNodes){
+   if(n.innerText && n.innerText.toLowerCase().includes("seat allocation failed")){
+    handleFailed();
+   }
+  }
+ }
+}).observe(document.body,{childList:true,subtree:true});
+
+function handleFailed(){
+ if(handlingFailed||stopScript)return;
+ handlingFailed=true;stopScript=true;reloadEnabled=false;
+
+ setTimeout(()=>{
+  document.querySelector("div.relative > div")?.click();
+  setTimeout(selectPassengers,500);
+  setTimeout(()=>{
+   stopScript=false;
+   reloadEnabled=true;
+   handlingFailed=false;
+   kick();
+   waitForSeats();
+  },1200);
+ },300);
+}
+
+function selectPassengers(){
+ const get=()=>[...document.querySelectorAll('button[role="checkbox"]')].filter(b=>b.offsetParent!==null);
+
+ const run=ps=>{
+  PASSENGER_REQ.forEach((n,i)=>{
+   const b=ps[n-1];
+   if(b && b.getAttribute("aria-checked")!=="true")
+    setTimeout(()=>b.click(),i*delay(120,300));
+  });
+
+  setTimeout(()=>{
+   document.querySelector('button[type="submit"]:not([disabled])')?.click();
+  },PASSENGER_REQ.length*delay(200,400)+delay(300,600));
+ };
+
+ const ex=get();
+ if(ex.length)return run(ex);
+
+ const o=new MutationObserver(()=>{
+  const ps=get();
+  if(ps.length){o.disconnect();run(ps);}
+ });
+ o.observe(document.body,{childList:true,subtree:true});
+}
+
+// ===== WAIT =====
+function waitForSeats(){
+ if(stopScript||onPay())return;
+
+ if(document.querySelector("svg g rect")){
+  document.querySelector("div > div.pt-7.overflow-auto")
+  ?.classList.replace("max-h-[450px]","max-h-[680px]");
+  requestAnimationFrame(scanSeats);
+ } else setTimeout(waitForSeats,120);
+}
+
+// ===== SCAN =====
+function scanSeats(){
+ if(stopScript||onPay())return;kick();
+
+ const seats=[...document.querySelectorAll("svg g")].map(g=>{
+  const r=g.querySelector("rect"); if(!r)return null;
+  return{
+   g,
+   id:`${r.x.baseVal.value}-${r.y.baseVal.value}`,
+   label:NL(g.querySelector("text")?.textContent||""),
+   fill:(r.getAttribute("fill")||"").toLowerCase(),
+   pwd:!!g.querySelector("image")
+  };
+ }).filter(Boolean);
+
+ let free=seats.filter(s=>
+  s.fill==="#fff" &&
+  !s.pwd &&
+  !seatskip.some(x=>s.label.includes(x)) &&
+  !tried.has(s.id)
+ );
+
+ lastSeatInfo=`🪑 ${free.length} seats | ${free.slice(0,3).map(s=>s.label).join(",")}`;
+ updateUI();
+
+ if(!free.length){
+  scanDone=Date.now();
+  smartReload();
+  return;
+ }
+ 
+ free=free.sort(()=>Math.random()-0.5);
+ trySeatsSequentially(free);
+}
+
+function trySeatsSequentially(list){
+ let i = 0;
+
+ function next(){
+  if(stopScript) return;
+
+  if(i >= list.length){
+    console.log("🔁 Completed all seats → smart reload");
+    smartReload();
+    return;
+  }
+
+  const isLast = (i === list.length - 1);
+  clickSeat(list[i++]);
+  setTimeout(()=>{
+    const elapsed = (Date.now() - startTime) / 1000;
+    
+    if(elapsed > 9){
+      console.log("⚡ >9s → instant reload");
+      location.reload();
+      return;
+    }
+
+    if(isLast){
+      console.log("🔁 Last seat reached → smart reload");
+      smartReload();
+    } else {
+      next();
+    }
+  }, RD(800,3000));
+ }
+
+ next();
+}
+
+function clickSeat(s){
+ if(stopScript)return;kick();
+ tried.add(s.id);
+ lastClickedSeat=s;
+
+ const r=s.g.querySelector("rect");
+ ["mousedown","mouseup","click"].forEach(e=>
+  r.dispatchEvent(new MouseEvent(e,{bubbles:true}))
+ );
+
+ seatFlow();
+}
+
+function getPopup(){
+ return window.innerWidth<768
+  ? document.querySelector('[role="dialog"]')
+  : document.querySelector('.hidden.md\\:block');
+}
+
+function seatFlow(){
+ if(stopScript)return;
+
+ const run=()=>{
+  const popup=getPopup();
+  if(!popup) return requestAnimationFrame(run);
+
+  const cb=popup.querySelector('input[type="checkbox"]:not(:checked)');
+  if(!cb) return requestAnimationFrame(run);
+
+  cb.click();
+
+  requestAnimationFrame(()=>{
+   const btn=document.querySelector("div > div.flex.flex-col > div > div > button:not([disabled])");
+   if(btn){
+    btn.click();
+    btn.click();
+   }
+  });
+ };
+
+ run();
+}
+
+function smartReload(){
+ if(!reloadEnabled||reloadT||stopScript)return;
+ const t=Date.now()+RD(3000,7000);
+ nextReloadTime=t;
+ reloadT=setTimeout(()=>{
+  if(stopScript)return;
+  tried.clear();
+  reloadT=null;
+  console.log("🔁 Smart Reload");
+  location.reload();
+ },t-Date.now());
+}
+
+setInterval(()=>{
+ updateUI();
+
+ if(stopScript||handlingFailed||onPay())return;
+ if(Date.now()-lastActivity>45000){
+  location.reload();
+ }
+},1000);
+
+console.log("🚀 FINAL ULTRA SCRIPT ACTIVE");
+waitForSeats();
